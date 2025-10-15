@@ -1,12 +1,41 @@
-import { logger } from "@vendetta";
-import Settings from "./Settings";
+// Hide Avatar Decorations & Clan Tags Plugin
+
+let styleElement: HTMLStyleElement | null = null;
 
 export default {
     onLoad: () => {
-        logger.log("Hello world!");
+        // Create and inject CSS to hide decorations
+        styleElement = document.createElement('style');
+        styleElement.id = 'hide-decorations-plugin';
+        styleElement.textContent = `
+            /* Hide avatar decorations */
+            [class*="avatarDecoration"],
+            [class*="avatar-decoration"],
+            [class*="AvatarDecoration"],
+            img[class*="decoration"],
+            div[class*="avatarDecoration"] > svg,
+            div[class*="avatarDecoration"] > img {
+                display: none !important;
+            }
+
+            /* Hide clan tags */
+            [class*="clanTag"],
+            [class*="clan-tag"],
+            [class*="ClanTag"],
+            [class*="profileClanTag"],
+            [class*="userTag"] > [class*="clan"] {
+                display: none !important;
+            }
+        `;
+        
+        document.head.appendChild(styleElement);
     },
+
     onUnload: () => {
-        logger.log("Goodbye, world.");
-    },
-    settings: Settings,
-}
+        // Remove the style element
+        if (styleElement?.parentNode) {
+            styleElement.parentNode.removeChild(styleElement);
+            styleElement = null;
+        }
+    }
+};

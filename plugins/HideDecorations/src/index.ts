@@ -1,57 +1,54 @@
 import { findByStoreName, findByProps } from '@vendetta/metro';
-import { after } from '@vendetta/patcher';
+import { after, instead } from '@vendetta/patcher';
 
 let patches: (() => void)[] = [];
-let observer: MutationObserver | null = null;
-
-// Function to hide decorations in the DOM
-function hideDecorations() {
-    // Hide by class name
-    const decorationElements = document.querySelectorAll('[class*="decoration"], [class*="Decoration"]');
-    decorationElements.forEach((el: any) => {
-        if (el.style) {
-            el.style.display = 'none';
-            el.style.visibility = 'hidden';
-            el.style.opacity = '0';
-        }
-    });
-    
-    // Hide by src attribute (images/videos)
-    const mediaElements = document.querySelectorAll('img[src*="decoration"], img[src*="avatar-decoration"], video[src*="decoration"]');
-    mediaElements.forEach((el: any) => {
-        if (el.style) {
-            el.style.display = 'none';
-        }
-    });
-}
 
 export default {
     onLoad: () => {
         try {
-            console.log("[HideDecorations] Loading...");
+            console.log("[HideDecorations] === DEBUG MODE ===");
 
-            // Method 1: Continuously watch for and hide decorations
-            hideDecorations();
-            
-            // Set up MutationObserver to catch dynamically added decorations
-            observer = new MutationObserver(() => {
-                hideDecorations();
-            });
-            
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-            
-            console.log("[HideDecorations] MutationObserver active");
+            // Find and log UserStore methods
+            const UserStore = findByStoreName('UserStore');
+            if (UserStore) {
+                console.log("[HideDecorations] UserStore found!");
+                console.log("[HideDecorations] UserStore methods:", Object.keys(UserStore).filter(k => typeof UserStore[k] === 'function'));
+            } else {
+                console.log("[HideDecorations] UserStore NOT found!");
+            }
 
-            // Method 2: Patch user data at the source
+            // Find and log anything related to avatar decorations
             try {
-                const UserStore = findByStoreName('UserStore');
-                
+                const AvatarDecorationUtils = findByProps('getAvatarDecorationURL');
+                if (AvatarDecorationUtils) {
+                    console.log("[HideDecorations] AvatarDecorationUtils found!");
+                    console.log("[HideDecorations] Methods:", Object.keys(AvatarDecorationUtils));
+                } else {
+                    console.log("[HideDecorations] AvatarDecorationUtils NOT found!");
+                }
+            } catch (e) {
+                console.log("[HideDecorations] Error finding AvatarDecorationUtils:", e);
+            }
+
+            // Try alternative searches
+            try {
+                const DecorationStore = findByStoreName('AvatarDecorationStore');
+                if (DecorationStore) {
+                    console.log("[HideDecorations] AvatarDecorationStore found!");
+                    console.log("[HideDecorations] Methods:", Object.keys(DecorationStore));
+                } else {
+                    console.log("[HideDecorations] AvatarDecorationStore NOT found");
+                }
+            } catch (e) {
+                console.log("[HideDecorations] Error finding AvatarDecorationStore:", e);
+            }
+
+            // Try patching based on what we know works from the Decor plugin
+            try {
                 if (UserStore?.getUser) {
                     patches.push(
-                        after('getUser', UserStore, (_, user) => {
+                        instead('getUser', UserStore, (args, orig) => {
+                            const user = orig(...args);
                             if (user) {
                                 user.avatarDecoration = null;
                                 user.avatarDecorationData = null;
@@ -59,41 +56,28 @@ export default {
                             return user;
                         })
                     );
-                    console.log("[HideDecorations] UserStore.getUser patched");
-                }
-                
-                if (UserStore?.getCurrentUser) {
-                    patches.push(
-                        after('getCurrentUser', UserStore, (_, user) => {
-                            if (user) {
-                                user.avatarDecoration = null;
-                                user.avatarDecorationData = null;
-                            }
-                            return user;
-                        })
-                    );
-                    console.log("[HideDecorations] UserStore.getCurrentUser patched");
+                    console.log("[HideDecorations] ✓ Patched UserStore.getUser with 'instead'");
                 }
             } catch (e) {
-                console.log("[HideDecorations] Could not patch UserStore:", e);
+                console.log("[HideDecorations] ✗ Failed to patch UserStore.getUser:", e);
             }
 
-            // Method 3: Try to patch the avatar decoration rendering function
+            // Try the decoration URL method
             try {
-                const AvatarUtils = findByProps('getAvatarDecorationURL');
-                if (AvatarUtils?.getAvatarDecorationURL) {
+                const ImageResolver = findByProps('getAvatarDecorationURL');
+                if (ImageResolver?.getAvatarDecorationURL) {
                     patches.push(
-                        after('getAvatarDecorationURL', AvatarUtils, () => {
-                            return null; // Return null so no decoration URL is used
+                        instead('getAvatarDecorationURL', ImageResolver, () => {
+                            return null;
                         })
                     );
-                    console.log("[HideDecorations] getAvatarDecorationURL patched");
+                    console.log("[HideDecorations] ✓ Patched getAvatarDecorationURL");
                 }
             } catch (e) {
-                console.log("[HideDecorations] Could not patch AvatarUtils:", e);
+                console.log("[HideDecorations] ✗ Failed to patch getAvatarDecorationURL:", e);
             }
 
-            console.log("[HideDecorations] Loaded!");
+            console.log("[HideDecorations] Loaded with", patches.length, "patches active");
         } catch (error) {
             console.error("[HideDecorations] Load error:", error);
         }
@@ -101,25 +85,9 @@ export default {
 
     onUnload: () => {
         try {
-            console.log("[HideDecorations] Unloading...");
-            
-            // Stop observing
-            if (observer) {
-                observer.disconnect();
-                observer = null;
-            }
-
-            // Remove patches
-            patches.forEach((unpatch) => {
-                try {
-                    unpatch();
-                } catch (e) {
-                    console.error("[HideDecorations] Unpatch error:", e);
-                }
-            });
+            patches.forEach((unpatch) => unpatch());
             patches = [];
-            
-            console.log("[HideDecorations] Unloaded!");
+            console.log("[HideDecorations] Unloaded");
         } catch (error) {
             console.error("[HideDecorations] Unload error:", error);
         }

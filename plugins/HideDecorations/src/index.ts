@@ -1,9 +1,11 @@
-// Hide Avatar Decorations & Clan Tags Plugin
+import { logger } from "@vendetta";
 
-let styleElement = null;
+let styleElement: HTMLStyleElement | null = null;
 
 export default {
     onLoad: () => {
+        logger.log("Hide Decorations plugin loading...");
+        
         // Create and inject CSS to hide decorations
         styleElement = document.createElement('style');
         styleElement.id = 'hide-decorations-plugin';
@@ -29,13 +31,18 @@ export default {
         `;
         
         document.head.appendChild(styleElement);
+        logger.log("Hide Decorations plugin loaded! Decorations hidden.");
     },
 
     onUnload: () => {
+        logger.log("Hide Decorations plugin unloading...");
+        
         // Remove the style element
         if (styleElement?.parentNode) {
             styleElement.parentNode.removeChild(styleElement);
             styleElement = null;
         }
+        
+        logger.log("Hide Decorations plugin unloaded.");
     }
 };

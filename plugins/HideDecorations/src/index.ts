@@ -9,56 +9,57 @@ export default {
         try {
             console.log("[HideDecorations] Loading plugin...");
 
-            // Remove any existing style element first (in case of reload)
+            // Remove any existing style element first
             const existing = document.getElementById('hide-decorations-plugin');
             if (existing) {
                 existing.remove();
             }
 
-            // Method 1: CSS injection (immediate effect)
+            // SUPER AGGRESSIVE CSS - hide anything decoration-related
             styleElement = document.createElement('style');
             styleElement.id = 'hide-decorations-plugin';
             styleElement.textContent = `
-                /* Hide avatar decorations - SVG elements */
-                svg[class^='avatarDecoration'],
-                svg[class*=' avatarDecoration'] {
+                /* Hide EVERYTHING with decoration in the class name */
+                [class*="decoration"],
+                [class*="Decoration"],
+                [class*="DECORATION"] {
                     display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                    width: 0 !important;
+                    height: 0 !important;
+                    position: absolute !important;
+                    pointer-events: none !important;
                 }
 
-                /* Hide avatar decoration images from CDN */
-                img[src^="https://cdn.discordapp.com/avatar-decoration-presets/"],
-                img[src*="avatar-decoration"] {
+                /* Hide by CDN URL patterns */
+                img[src*="avatar-decoration"],
+                img[src*="avatar_decoration"],
+                img[src*="/avatar-decoration-presets/"],
+                img[src*="cdn.discordapp.com"][src*="decoration"] {
                     display: none !important;
+                    visibility: hidden !important;
                 }
 
-                /* Hide profile effects */
-                img[src^="https://cdn.discordapp.com/assets/profile_effects/"],
-                video[src*="profile_effects"] {
+                /* Hide SVG decorations */
+                svg[class*="decoration"],
+                svg[aria-label*="decoration"],
+                div[class*="avatar"] svg[class*="decoration"] {
                     display: none !important;
-                }
-
-                /* Hide animated nameplates */
-                video[src*="assets/collectibles/nameplates"] {
-                    display: none !important;
-                }
-
-                /* Hide clan tags - multiple contexts */
-                span[class*="clantag" i],
-                span[class*="clanTag"],
-                span[class*="clanTagChiplet"],
-                div[class*="compact"] span[class*="clanTagChiplet"] {
-                    display: none !important;
+                    visibility: hidden !important;
                 }
             `;
             
             if (document.head) {
                 document.head.appendChild(styleElement);
-                console.log("[HideDecorations] CSS injected successfully");
-            } else {
-                console.error("[HideDecorations] document.head not available!");
+                console.log("[HideDecorations] CSS injected");
+                
+                // Verify it's in the DOM
+                const inserted = document.getElementById('hide-decorations-plugin');
+                console.log("[HideDecorations] CSS in DOM:", !!inserted);
             }
 
-            // Method 2: Patch stores (deeper integration)
+            // Patch UserStore to remove decoration data
             try {
                 const UserStore = findByStoreName('UserStore');
                 if (UserStore?.getUser) {
@@ -68,41 +69,38 @@ export default {
                                 user.avatarDecoration = null;
                                 user.avatarDecorationData = null;
                             }
+                            return user;
                         })
                     );
-                    console.log("[HideDecorations] UserStore patched");
+                    console.log("[HideDecorations] UserStore.getUser patched");
+                }
+                
+                // Also try getCurrentUser
+                if (UserStore?.getCurrentUser) {
+                    patches.push(
+                        after('getCurrentUser', UserStore, (_, user) => {
+                            if (user) {
+                                user.avatarDecoration = null;
+                                user.avatarDecorationData = null;
+                            }
+                            return user;
+                        })
+                    );
+                    console.log("[HideDecorations] UserStore.getCurrentUser patched");
                 }
             } catch (e) {
                 console.log("[HideDecorations] Could not patch UserStore:", e);
             }
 
-            // Try to patch clan tags
-            try {
-                const GuildMemberStore = findByStoreName('GuildMemberStore');
-                if (GuildMemberStore?.getMember) {
-                    patches.push(
-                        after('getMember', GuildMemberStore, (_, member) => {
-                            if (member) {
-                                member.clan = null;
-                            }
-                        })
-                    );
-                    console.log("[HideDecorations] GuildMemberStore patched");
-                }
-            } catch (e) {
-                console.log("[HideDecorations] Could not patch GuildMemberStore:", e);
-            }
-
-            console.log("[HideDecorations] Plugin loaded successfully!");
+            console.log("[HideDecorations] Plugin loaded!");
         } catch (error) {
-            console.error("[HideDecorations] Failed to load plugin:", error);
-            // Don't throw - allow plugin to stay enabled even if there's an error
+            console.error("[HideDecorations] Load error:", error);
         }
     },
 
     onUnload: () => {
         try {
-            console.log("[HideDecorations] Unloading plugin...");
+            console.log("[HideDecorations] Unloading...");
             
             // Remove CSS
             if (styleElement?.parentNode) {
@@ -110,7 +108,6 @@ export default {
                 styleElement = null;
             }
             
-            // Also try to remove by ID in case reference was lost
             const existing = document.getElementById('hide-decorations-plugin');
             if (existing) {
                 existing.remove();
@@ -121,14 +118,14 @@ export default {
                 try {
                     unpatch();
                 } catch (e) {
-                    console.error("[HideDecorations] Error unpatching:", e);
+                    console.error("[HideDecorations] Unpatch error:", e);
                 }
             });
             patches = [];
             
-            console.log("[HideDecorations] Plugin unloaded successfully");
+            console.log("[HideDecorations] Unloaded!");
         } catch (error) {
-            console.error("[HideDecorations] Error during unload:", error);
+            console.error("[HideDecorations] Unload error:", error);
         }
     }
 };

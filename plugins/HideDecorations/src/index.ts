@@ -1,86 +1,53 @@
-import { after } from "@vendetta/patcher";
-import { findByProps } from "@vendetta/metro";
+import { findByStoreName } from '@vendetta/metro';
+import { after } from '@vendetta/patcher';
+
+const UserStore = findByStoreName('UserStore');
+const GuildMemberStore = findByStoreName('GuildMemberStore');
 
 let patches: (() => void)[] = [];
-let styleElement: HTMLStyleElement | null = null;
 
 export default {
     onLoad: () => {
-        // Inject CSS as a fallback method
-        styleElement = document.createElement('style');
-        styleElement.id = 'hide-decorations-plugin';
-        styleElement.textContent = `
-            /* Hide avatar decorations */
-            [class*="avatarDecoration"],
-            [class*="avatar-decoration"],
-            [class*="AvatarDecoration"],
-            img[class*="decoration"],
-            div[class*="avatarDecoration"] > svg,
-            div[class*="avatarDecoration"] > img {
-                display: none !important;
-            }
-
-            /* Hide clan tags */
-            [class*="clanTag"],
-            [class*="clan-tag"],
-            [class*="ClanTag"],
-            [class*="profileClanTag"],
-            [class*="userTag"] > [class*="clan"] {
-                display: none !important;
-            }
-        `;
-        document.head.appendChild(styleElement);
-
-        // Try to patch avatar decoration rendering
-        try {
-            const UserStore = findByProps("getCurrentUser");
-            if (UserStore) {
-                patches.push(
-                    after("getCurrentUser", UserStore, (args, res) => {
-                        if (res?.avatarDecoration) {
-                            res.avatarDecoration = null;
-                        }
-                        return res;
-                    })
-                );
-            }
-        } catch (e) {
-            console.log("Could not patch avatar decorations:", e);
+        // Patch UserStore.getUser to remove avatar decorations
+        if (UserStore) {
+            patches.push(
+                after('getUser', UserStore, (_, user) => {
+                    if (user) {
+                        // Remove avatar decoration
+                        user.avatarDecoration = null;
+                        user.avatarDecorationData = null;
+                    }
+                })
+            );
         }
 
-        // Try to patch clan tags
-        try {
-            const ClanStore = findByProps("getClan", "getTag");
-            if (ClanStore && ClanStore.getClan) {
-                patches.push(
-                    after("getClan", ClanStore, () => {
-                        return null;
-                    })
-                );
-            }
-            if (ClanStore && ClanStore.getTag) {
-                patches.push(
-                    after("getTag", ClanStore, () => {
-                        return null;
-                    })
-                );
-            }
-        } catch (e) {
-            console.log("Could not patch clan tags:", e);
+        // Patch GuildMemberStore to remove clan tags
+        if (GuildMemberStore) {
+            patches.push(
+                after('getMember', GuildMemberStore, (_, member) => {
+                    if (member) {
+                        // Remove clan tag
+                        member.clan = null;
+                    }
+                })
+            );
+            
+            patches.push(
+                after('getMembers', GuildMemberStore, (_, members) => {
+                    if (Array.isArray(members)) {
+                        members.forEach(member => {
+                            if (member) {
+                                member.clan = null;
+                            }
+                        });
+                    }
+                })
+            );
         }
     },
 
     onUnload: () => {
-        // Remove CSS
-        if (styleElement?.parentNode) {
-            styleElement.parentNode.removeChild(styleElement);
-            styleElement = null;
-        }
-
-        // Unpatch all patches
-        for (const unpatch of patches) {
-            unpatch();
-        }
+        patches.forEach((unpatch) => unpatch());
         patches = [];
     }
 };

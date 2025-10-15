@@ -1,6 +1,6 @@
 // Hide Avatar Decorations & Clan Tags Plugin
 
-let styleElement: HTMLStyleElement | null = null;
+let styleElement = null;
 
 export default {
     onLoad: () => {

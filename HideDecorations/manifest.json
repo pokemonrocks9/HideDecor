@@ -1,1 +1,1 @@
-{"name":"HideDec","description":"Hides avatar decorations and clan tags from user profiles","authors":[{"name":"Poky","id":"your_discord_id"}],"main":"index.js","vendetta":{"icon":"ic_hide"},"hash":"7989d67540dc47ff8a800e835612ad937a7dc5d8a2624f4fbf5476216a9f8846"}
+{"name":"HideDecor","description":"Hides avatar decorations and clan tags from user profiles","authors":[{"name":"Poky","id":"your_discord_id"}],"main":"index.js","vendetta":{"icon":"ic_hide"},"hash":"7989d67540dc47ff8a800e835612ad937a7dc5d8a2624f4fbf5476216a9f8846"}

@@ -1,67 +1,54 @@
-import { findByStoreName } from '@vendetta/metro';
+import { findByStoreName, findByProps } from '@vendetta/metro';
 import { after } from '@vendetta/patcher';
 
 let patches: (() => void)[] = [];
-let styleElement: HTMLStyleElement | null = null;
+let observer: MutationObserver | null = null;
+
+// Function to hide decorations in the DOM
+function hideDecorations() {
+    // Hide by class name
+    const decorationElements = document.querySelectorAll('[class*="decoration"], [class*="Decoration"]');
+    decorationElements.forEach((el: any) => {
+        if (el.style) {
+            el.style.display = 'none';
+            el.style.visibility = 'hidden';
+            el.style.opacity = '0';
+        }
+    });
+    
+    // Hide by src attribute (images/videos)
+    const mediaElements = document.querySelectorAll('img[src*="decoration"], img[src*="avatar-decoration"], video[src*="decoration"]');
+    mediaElements.forEach((el: any) => {
+        if (el.style) {
+            el.style.display = 'none';
+        }
+    });
+}
 
 export default {
     onLoad: () => {
         try {
-            console.log("[HideDecorations] Loading plugin...");
+            console.log("[HideDecorations] Loading...");
 
-            // Remove any existing style element first
-            const existing = document.getElementById('hide-decorations-plugin');
-            if (existing) {
-                existing.remove();
-            }
-
-            // SUPER AGGRESSIVE CSS - hide anything decoration-related
-            styleElement = document.createElement('style');
-            styleElement.id = 'hide-decorations-plugin';
-            styleElement.textContent = `
-                /* Hide EVERYTHING with decoration in the class name */
-                [class*="decoration"],
-                [class*="Decoration"],
-                [class*="DECORATION"] {
-                    display: none !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
-                    width: 0 !important;
-                    height: 0 !important;
-                    position: absolute !important;
-                    pointer-events: none !important;
-                }
-
-                /* Hide by CDN URL patterns */
-                img[src*="avatar-decoration"],
-                img[src*="avatar_decoration"],
-                img[src*="/avatar-decoration-presets/"],
-                img[src*="cdn.discordapp.com"][src*="decoration"] {
-                    display: none !important;
-                    visibility: hidden !important;
-                }
-
-                /* Hide SVG decorations */
-                svg[class*="decoration"],
-                svg[aria-label*="decoration"],
-                div[class*="avatar"] svg[class*="decoration"] {
-                    display: none !important;
-                    visibility: hidden !important;
-                }
-            `;
+            // Method 1: Continuously watch for and hide decorations
+            hideDecorations();
             
-            if (document.head) {
-                document.head.appendChild(styleElement);
-                console.log("[HideDecorations] CSS injected");
-                
-                // Verify it's in the DOM
-                const inserted = document.getElementById('hide-decorations-plugin');
-                console.log("[HideDecorations] CSS in DOM:", !!inserted);
-            }
+            // Set up MutationObserver to catch dynamically added decorations
+            observer = new MutationObserver(() => {
+                hideDecorations();
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            console.log("[HideDecorations] MutationObserver active");
 
-            // Patch UserStore to remove decoration data
+            // Method 2: Patch user data at the source
             try {
                 const UserStore = findByStoreName('UserStore');
+                
                 if (UserStore?.getUser) {
                     patches.push(
                         after('getUser', UserStore, (_, user) => {
@@ -75,7 +62,6 @@ export default {
                     console.log("[HideDecorations] UserStore.getUser patched");
                 }
                 
-                // Also try getCurrentUser
                 if (UserStore?.getCurrentUser) {
                     patches.push(
                         after('getCurrentUser', UserStore, (_, user) => {
@@ -92,7 +78,22 @@ export default {
                 console.log("[HideDecorations] Could not patch UserStore:", e);
             }
 
-            console.log("[HideDecorations] Plugin loaded!");
+            // Method 3: Try to patch the avatar decoration rendering function
+            try {
+                const AvatarUtils = findByProps('getAvatarDecorationURL');
+                if (AvatarUtils?.getAvatarDecorationURL) {
+                    patches.push(
+                        after('getAvatarDecorationURL', AvatarUtils, () => {
+                            return null; // Return null so no decoration URL is used
+                        })
+                    );
+                    console.log("[HideDecorations] getAvatarDecorationURL patched");
+                }
+            } catch (e) {
+                console.log("[HideDecorations] Could not patch AvatarUtils:", e);
+            }
+
+            console.log("[HideDecorations] Loaded!");
         } catch (error) {
             console.error("[HideDecorations] Load error:", error);
         }
@@ -102,15 +103,10 @@ export default {
         try {
             console.log("[HideDecorations] Unloading...");
             
-            // Remove CSS
-            if (styleElement?.parentNode) {
-                styleElement.parentNode.removeChild(styleElement);
-                styleElement = null;
-            }
-            
-            const existing = document.getElementById('hide-decorations-plugin');
-            if (existing) {
-                existing.remove();
+            // Stop observing
+            if (observer) {
+                observer.disconnect();
+                observer = null;
             }
 
             // Remove patches

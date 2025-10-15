@@ -1,32 +1,31 @@
-(function(c,r,s){"use strict";let n=[],t=null;var l={onLoad:function(){try{console.log("[HideDecorations] Loading plugin...");const o=document.getElementById("hide-decorations-plugin");o&&o.remove(),t=document.createElement("style"),t.id="hide-decorations-plugin",t.textContent=`
-                /* Hide avatar decorations - SVG elements */
-                svg[class^='avatarDecoration'],
-                svg[class*=' avatarDecoration'] {
+(function(a,d,c){"use strict";let r=[],n=null;var s={onLoad:function(){try{console.log("[HideDecorations] Loading plugin...");const o=document.getElementById("hide-decorations-plugin");if(o&&o.remove(),n=document.createElement("style"),n.id="hide-decorations-plugin",n.textContent=`
+                /* Hide EVERYTHING with decoration in the class name */
+                [class*="decoration"],
+                [class*="Decoration"],
+                [class*="DECORATION"] {
                     display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                    width: 0 !important;
+                    height: 0 !important;
+                    position: absolute !important;
+                    pointer-events: none !important;
                 }
 
-                /* Hide avatar decoration images from CDN */
-                img[src^="https://cdn.discordapp.com/avatar-decoration-presets/"],
-                img[src*="avatar-decoration"] {
+                /* Hide by CDN URL patterns */
+                img[src*="avatar-decoration"],
+                img[src*="avatar_decoration"],
+                img[src*="/avatar-decoration-presets/"],
+                img[src*="cdn.discordapp.com"][src*="decoration"] {
                     display: none !important;
+                    visibility: hidden !important;
                 }
 
-                /* Hide profile effects */
-                img[src^="https://cdn.discordapp.com/assets/profile_effects/"],
-                video[src*="profile_effects"] {
+                /* Hide SVG decorations */
+                svg[class*="decoration"],
+                svg[aria-label*="decoration"],
+                div[class*="avatar"] svg[class*="decoration"] {
                     display: none !important;
+                    visibility: hidden !important;
                 }
-
-                /* Hide animated nameplates */
-                video[src*="assets/collectibles/nameplates"] {
-                    display: none !important;
-                }
-
-                /* Hide clan tags - multiple contexts */
-                span[class*="clantag" i],
-                span[class*="clanTag"],
-                span[class*="clanTagChiplet"],
-                div[class*="compact"] span[class*="clanTagChiplet"] {
-                    display: none !important;
-                }
-            `,document.head?(document.head.appendChild(t),console.log("[HideDecorations] CSS injected successfully")):console.error("[HideDecorations] document.head not available!");try{const e=r.findByStoreName("UserStore");e?.getUser&&(n.push(s.after("getUser",e,function(i,a){a&&(a.avatarDecoration=null,a.avatarDecorationData=null)})),console.log("[HideDecorations] UserStore patched"))}catch(e){console.log("[HideDecorations] Could not patch UserStore:",e)}try{const e=r.findByStoreName("GuildMemberStore");e?.getMember&&(n.push(s.after("getMember",e,function(i,a){a&&(a.clan=null)})),console.log("[HideDecorations] GuildMemberStore patched"))}catch(e){console.log("[HideDecorations] Could not patch GuildMemberStore:",e)}console.log("[HideDecorations] Plugin loaded successfully!")}catch(o){console.error("[HideDecorations] Failed to load plugin:",o)}},onUnload:function(){try{console.log("[HideDecorations] Unloading plugin..."),t?.parentNode&&(t.parentNode.removeChild(t),t=null);const o=document.getElementById("hide-decorations-plugin");o&&o.remove(),n.forEach(function(e){try{e()}catch(i){console.error("[HideDecorations] Error unpatching:",i)}}),n=[],console.log("[HideDecorations] Plugin unloaded successfully")}catch(o){console.error("[HideDecorations] Error during unload:",o)}}};return c.default=l,Object.defineProperty(c,"__esModule",{value:!0}),c})({},vendetta.metro,vendetta.patcher);
+            `,document.head){document.head.appendChild(n),console.log("[HideDecorations] CSS injected");const e=document.getElementById("hide-decorations-plugin");console.log("[HideDecorations] CSS in DOM:",!!e)}try{const e=d.findByStoreName("UserStore");e?.getUser&&(r.push(c.after("getUser",e,function(i,t){return t&&(t.avatarDecoration=null,t.avatarDecorationData=null),t})),console.log("[HideDecorations] UserStore.getUser patched")),e?.getCurrentUser&&(r.push(c.after("getCurrentUser",e,function(i,t){return t&&(t.avatarDecoration=null,t.avatarDecorationData=null),t})),console.log("[HideDecorations] UserStore.getCurrentUser patched"))}catch(e){console.log("[HideDecorations] Could not patch UserStore:",e)}console.log("[HideDecorations] Plugin loaded!")}catch(o){console.error("[HideDecorations] Load error:",o)}},onUnload:function(){try{console.log("[HideDecorations] Unloading..."),n?.parentNode&&(n.parentNode.removeChild(n),n=null);const o=document.getElementById("hide-decorations-plugin");o&&o.remove(),r.forEach(function(e){try{e()}catch(i){console.error("[HideDecorations] Unpatch error:",i)}}),r=[],console.log("[HideDecorations] Unloaded!")}catch(o){console.error("[HideDecorations] Unload error:",o)}}};return a.default=s,Object.defineProperty(a,"__esModule",{value:!0}),a})({},vendetta.metro,vendetta.patcher);
